@@ -18,28 +18,27 @@ def register_user(user):
     return response.json()
 
 
-def test_login_existing_user():
-    user = generate_user()
-    register_data = register_user(user)
+class TestLogin:
+    def test_login_existing_user(self):
+        user = generate_user()
+        register_data = register_user(user)
 
-    response = requests.post(f'{BASE_URL}/auth/login', json={
-        'email': user['email'],
-        'password': user['password']
-    })
+        response = requests.post(f'{BASE_URL}/auth/login', json={
+            'email': user['email'],
+            'password': user['password']
+        })
 
-    assert response.status_code == 200
-    assert response.json()['success'] is True
+        assert response.status_code == 200
+        assert response.json()['success'] is True
 
-    # уборка
-    token = register_data['accessToken']
-    requests.delete(f'{BASE_URL}/auth/user', headers={'Authorization': token})
+        token = register_data['accessToken']
+        requests.delete(f'{BASE_URL}/auth/user', headers={'Authorization': token})
 
+    def test_login_invalid_credentials(self):
+        response = requests.post(f'{BASE_URL}/auth/login', json={
+            'email': 'nonexistent@yandex.ru',
+            'password': 'wrongpassword'
+        })
 
-def test_login_invalid_credentials():
-    response = requests.post(f'{BASE_URL}/auth/login', json={
-        'email': 'nonexistent@yandex.ru',
-        'password': 'wrongpassword'
-    })
-
-    assert response.status_code == 401
-    assert response.json()['message'] == 'email or password are incorrect'
+        assert response.status_code == 401
+        assert response.json()['message'] == 'email or password are incorrect'

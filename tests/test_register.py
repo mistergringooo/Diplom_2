@@ -14,31 +14,30 @@ def generate_user():
     }
 
 
-def test_register_unique_user():
-    user = generate_user()
+class TestRegister:
+    def test_register_unique_user(self):
+        user = generate_user()
 
-    response = requests.post(f'{BASE_URL}/auth/register', json=user)
+        response = requests.post(f'{BASE_URL}/auth/register', json=user)
 
-    assert response.status_code == 200
-    body = response.json()
-    assert body['success'] is True
-    assert 'accessToken' in body
+        assert response.status_code == 200
+        body = response.json()
+        assert body['success'] is True
+        assert 'accessToken' in body
 
-    # уборка — удаляем созданного пользователя
-    token = body['accessToken']
-    requests.delete(f'{BASE_URL}/auth/user', headers={'Authorization': token})
+        token = body['accessToken']
+        requests.delete(f'{BASE_URL}/auth/user', headers={'Authorization': token})
 
+    @pytest.mark.parametrize('modify_user, expected_message', [
+        (lambda user: user, 'User already exists'),
+        (lambda user: {**user, 'email': ''}, 'Email, password and name are required fields'),
+    ])
+    def test_register_invalid(self, modify_user, expected_message):
+        user = generate_user()
+        requests.post(f'{BASE_URL}/auth/register', json=user)
 
-@pytest.mark.parametrize('modify_user, expected_message', [
-    (lambda user: user, 'User already exists'),
-    (lambda user: {**user, 'email': ''}, 'Email, password and name are required fields'),
-])
-def test_register_invalid(modify_user, expected_message):
-    user = generate_user()
-    requests.post(f'{BASE_URL}/auth/register', json=user)  # создаём один раз для кейса "уже существует"
+        invalid_user = modify_user(user)
+        response = requests.post(f'{BASE_URL}/auth/register', json=invalid_user)
 
-    invalid_user = modify_user(user)
-    response = requests.post(f'{BASE_URL}/auth/register', json=invalid_user)
-
-    assert response.status_code == 403
-    assert response.json()['message'] == expected_message
+        assert response.status_code == 403
+        assert response.json()['message'] == expected_message

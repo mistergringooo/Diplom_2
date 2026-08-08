@@ -19,65 +19,63 @@ def get_ingredient_ids(count=2):
     return [ingredients[i]['_id'] for i in range(count)]
 
 
-def test_create_order_with_auth():
-    user = generate_user()
-    register_response = requests.post(f'{BASE_URL}/auth/register', json=user)
-    token = register_response.json()['accessToken']
+class TestOrders:
+    def test_create_order_with_auth(self):
+        user = generate_user()
+        register_response = requests.post(f'{BASE_URL}/auth/register', json=user)
+        token = register_response.json()['accessToken']
 
-    ingredient_ids = get_ingredient_ids()
+        ingredient_ids = get_ingredient_ids()
 
-    response = requests.post(
-        f'{BASE_URL}/orders',
-        json={'ingredients': ingredient_ids},
-        headers={'Authorization': token}
-    )
+        response = requests.post(
+            f'{BASE_URL}/orders',
+            json={'ingredients': ingredient_ids},
+            headers={'Authorization': token}
+        )
 
-    assert response.status_code == 200
-    assert response.json()['success'] is True
+        assert response.status_code == 200
+        assert response.json()['success'] is True
 
-    requests.delete(f'{BASE_URL}/auth/user', headers={'Authorization': token})
+        requests.delete(f'{BASE_URL}/auth/user', headers={'Authorization': token})
 
+    def test_create_order_without_auth(self):
+        ingredient_ids = get_ingredient_ids()
 
-def test_create_order_without_auth():
-    ingredient_ids = get_ingredient_ids()
+        response = requests.post(
+            f'{BASE_URL}/orders',
+            json={'ingredients': ingredient_ids}
+        )
 
-    response = requests.post(
-        f'{BASE_URL}/orders',
-        json={'ingredients': ingredient_ids}
-    )
+        assert response.status_code == 200
+        assert response.json()['success'] is True
 
-    assert response.status_code == 200
-    assert response.json()['success'] is True
+    def test_create_order_without_ingredients(self):
+        user = generate_user()
+        register_response = requests.post(f'{BASE_URL}/auth/register', json=user)
+        token = register_response.json()['accessToken']
 
+        response = requests.post(
+            f'{BASE_URL}/orders',
+            json={'ingredients': []},
+            headers={'Authorization': token}
+        )
 
-def test_create_order_without_ingredients():
-    user = generate_user()
-    register_response = requests.post(f'{BASE_URL}/auth/register', json=user)
-    token = register_response.json()['accessToken']
+        assert response.status_code == 400
+        assert response.json()['message'] == 'Ingredient ids must be provided'
 
-    response = requests.post(
-        f'{BASE_URL}/orders',
-        json={'ingredients': []},
-        headers={'Authorization': token}
-    )
+        requests.delete(f'{BASE_URL}/auth/user', headers={'Authorization': token})
 
-    assert response.status_code == 400
-    assert response.json()['message'] == 'Ingredient ids must be provided'
+    def test_create_order_invalid_ingredient_hash(self):
+        user = generate_user()
+        register_response = requests.post(f'{BASE_URL}/auth/register', json=user)
+        token = register_response.json()['accessToken']
 
-    requests.delete(f'{BASE_URL}/auth/user', headers={'Authorization': token})
+        response = requests.post(
+            f'{BASE_URL}/orders',
+            json={'ingredients': ['invalid_hash_123']},
+            headers={'Authorization': token}
+        )
 
+        assert response.status_code == 500
 
-def test_create_order_invalid_ingredient_hash():
-    user = generate_user()
-    register_response = requests.post(f'{BASE_URL}/auth/register', json=user)
-    token = register_response.json()['accessToken']
-
-    response = requests.post(
-        f'{BASE_URL}/orders',
-        json={'ingredients': ['invalid_hash_123']},
-        headers={'Authorization': token}
-    )
-
-    assert response.status_code == 500
-
-    requests.delete(f'{BASE_URL}/auth/user', headers={'Authorization': token})
+        requests.delete(f'{BASE_URL}/auth/user', headers={'Authorization': token})
