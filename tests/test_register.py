@@ -1,43 +1,33 @@
-import uuid
-
 import pytest
-import requests
 
-BASE_URL = 'https://stellarburgers.education-services.ru/api'
-
-
-def generate_user():
-    return {
-        'email': f'{uuid.uuid4()}@yandex.ru',
-        'password': 'password123',
-        'name': 'Test User'
-    }
+from data import ERROR_USER_ALREADY_EXISTS, ERROR_MISSING_REQUIRED_FIELDS
+from helpers import generate_user
+from api_client import StellarBurgersAPI
 
 
 class TestRegister:
     def test_register_unique_user(self):
         user = generate_user()
 
-        response = requests.post(f'{BASE_URL}/auth/register', json=user)
+        response = StellarBurgersAPI.register_user(user)
 
         assert response.status_code == 200
         body = response.json()
         assert body['success'] is True
         assert 'accessToken' in body
 
-        token = body['accessToken']
-        requests.delete(f'{BASE_URL}/auth/user', headers={'Authorization': token})
+        StellarBurgersAPI.delete_user(body['accessToken'])
 
     @pytest.mark.parametrize('modify_user, expected_message', [
-        (lambda user: user, 'User already exists'),
-        (lambda user: {**user, 'email': ''}, 'Email, password and name are required fields'),
+        (lambda user: user, ERROR_USER_ALREADY_EXISTS),
+        (lambda user: {**user, 'email': ''}, ERROR_MISSING_REQUIRED_FIELDS),
     ])
     def test_register_invalid(self, modify_user, expected_message):
         user = generate_user()
-        requests.post(f'{BASE_URL}/auth/register', json=user)
+        StellarBurgersAPI.register_user(user)
 
         invalid_user = modify_user(user)
-        response = requests.post(f'{BASE_URL}/auth/register', json=invalid_user)
+        response = StellarBurgersAPI.register_user(invalid_user)
 
         assert response.status_code == 403
         assert response.json()['message'] == expected_message

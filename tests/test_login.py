@@ -1,44 +1,18 @@
-import uuid
-
-import requests
-
-BASE_URL = 'https://stellarburgers.education-services.ru/api'
-
-
-def generate_user():
-    return {
-        'email': f'{uuid.uuid4()}@yandex.ru',
-        'password': 'password123',
-        'name': 'Test User'
-    }
-
-
-def register_user(user):
-    response = requests.post(f'{BASE_URL}/auth/register', json=user)
-    return response.json()
+from data import ERROR_INVALID_CREDENTIALS
+from api_client import StellarBurgersAPI
 
 
 class TestLogin:
-    def test_login_existing_user(self):
-        user = generate_user()
-        register_data = register_user(user)
+    def test_login_existing_user(self, registered_user):
+        user, _ = registered_user
 
-        response = requests.post(f'{BASE_URL}/auth/login', json={
-            'email': user['email'],
-            'password': user['password']
-        })
+        response = StellarBurgersAPI.login_user(user['email'], user['password'])
 
         assert response.status_code == 200
         assert response.json()['success'] is True
 
-        token = register_data['accessToken']
-        requests.delete(f'{BASE_URL}/auth/user', headers={'Authorization': token})
-
     def test_login_invalid_credentials(self):
-        response = requests.post(f'{BASE_URL}/auth/login', json={
-            'email': 'nonexistent@yandex.ru',
-            'password': 'wrongpassword'
-        })
+        response = StellarBurgersAPI.login_user('nonexistent@yandex.ru', 'wrongpassword')
 
         assert response.status_code == 401
-        assert response.json()['message'] == 'email or password are incorrect'
+        assert response.json()['message'] == ERROR_INVALID_CREDENTIALS
